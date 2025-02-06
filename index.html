@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>同步视频播放器</title>
+    <link href="https://vjs.zencdn.net/7.10.2/video-js.css" rel="stylesheet" />
+    <script src="https://vjs.zencdn.net/7.10.2/video.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+</head>
+<body>
+    <div>
+        <input type="text" id="videoUrl" placeholder="输入视频地址">
+        <button id="changeVideo">更改视频</button>
+    </div>
+    <video id="videoPlayer" controls>
+        <source src="default-video.mp4" type="video/mp4">
+        您的浏览器不支持HTML5视频。
+    </video>
+</body>
+</html>
+<script>
+    const video = document.getElementById('videoPlayer');
+    const videoUrlInput = document.getElementById('videoUrl');
+    const changeVideoButton = document.getElementById('changeVideo');
+    const socket = new WebSocket('ws://ee63-183-206-129-68.ngrok-free.app ');
+
+    // 监听WebSocket消息
+    socket.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        if (data.action === 'play') {
+            video.play();
+        } else if (data.action === 'pause') {
+            video.pause();
+        } else if (data.action === 'seek') {
+            video.currentTime = data.time;
+        } else if (data.action === 'volume') {
+            video.volume = data.volume;
+        } else if (data.action === 'changeVideo') {
+            if (Hls.isSupported()) {
+          var hls = new Hls();
+          hls.loadSource(data.url);
+          hls.attachMedia(video);
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+          video.src = data.url;
+        }
+            video.play();
+        } else if (data.action === "sync") {
+            const state = data.state;
+            if (Hls.isSupported()) {
+              var hls = new Hls();
+              hls.loadSource(state.url);
+              hls.attachMedia(video);
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+              video.src = state.url;
+            }
+            video.currentTime = state.current_time;
+            video.volume = state.volume;
+            if (state.paused) {
+                video.pause();
+            } else {
+                video.play();
+            }
+        }
+    };
+
+    // 播放/暂停同步
+    video.addEventListener('play', () => {
+        socket.send(JSON.stringify({ action: 'play' }));
+    });
+
+    video.addEventListener('pause', () => {
+        socket.send(JSON.stringify({ action: 'pause' }));
+    });
+    let lastSentTime = 0;
+    // 进度同步
+    video.addEventListener('timeupdate', () => {
+        const currentTime = video.currentTime;
+        if (Math.abs(currentTime - lastSentTime) > 2) { // 只在时间变化超过 1 秒时同步
+            socket.send(JSON.stringify({ action: 'seek', time: video.currentTime }));
+        }
+        lastSentTime = currentTime;
+        // socket.send(JSON.stringify({ action: 'seek', time: video.currentTime }));
+    });
+
+    // 音量同步
+    video.addEventListener('volumechange', () => {
+        socket.send(JSON.stringify({ action: 'volume', volume: video.volume }));
+    });
+
+    // 更改视频地址
+    changeVideoButton.addEventListener('click', () => {
+        const newVideoUrl = videoUrlInput.value;
+        if (newVideoUrl) {
+            socket.send(JSON.stringify({ action: 'changeVideo', url: newVideoUrl }));
+        }
+    });
+</script>
