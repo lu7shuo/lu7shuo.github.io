@@ -61,25 +61,23 @@
         } else if (data.action === "sync") {
             const state = data.state;
             if (Hls.isSupported()) {
-              if (Hls.isSupported()) {
-                var hls = new Hls();
-                // 获取并修改 m3u8 文件中的所有 http 链接
-                fetch(videoUrl)
-                    .then(response => response.text())
-                    .then(m3u8Content => {
-                        // 替换 m3u8 文件中的所有 HTTP 链接为 HTTPS
-                        var updatedM3U8Content = m3u8Content.replace(/http:\/\//g, 'https://');
+              var hls = new Hls();
+              fetch(videoUrl)
+                .then(response => response.text())
+                .then(m3u8Content => {
+                    // 替换 m3u8 文件中的所有 HTTP 链接为 HTTPS
+                    var updatedM3U8Content = m3u8Content.replace(/http:\/\//g, 'https://');
 
-                        // 使用 HLS.js 播放修改后的 m3u8 内容
-                        hls.loadSource('data:text/plain;base64,' + btoa(updatedM3U8Content));
-                        hls.attachMedia(video); // 附加到 video 元素
-                    })
-                    .catch(error => {
-                        console.error('Error loading or modifying m3u8 file:', error);
-                    });
-                } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                  video.src = state.url;
-                }
+                    // 使用 HLS.js 播放修改后的 m3u8 内容
+                    hls.loadSource('data:text/plain;base64,' + btoa(updatedM3U8Content));
+                    hls.attachMedia(video); // 附加到 video 元素
+                })
+                .catch(error => {
+                    console.error('Error loading or modifying m3u8 file:', error);
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+              video.src = state.url;
+            }
             video.currentTime = state.current_time;
             video.volume = state.volume;
             if (state.paused) {
