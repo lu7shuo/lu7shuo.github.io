@@ -62,7 +62,7 @@
             const state = data.state;
             if (Hls.isSupported()) {
               var hls = new Hls();
-              fetch(data.url)
+              fetch(state.url)
                 .then(response => response.text())
                 .then(m3u8Content => {
                     // 替换 m3u8 文件中的所有 HTTP 链接为 HTTPS
